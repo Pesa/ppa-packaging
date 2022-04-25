@@ -1,0 +1,32 @@
+name: Build Debian packages
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-18.04, ubuntu-20.04]
+    steps:
+      - name: Install dependencies
+        run: sudo apt-get -qy install --no-install-recommends pbuilder
+      - run: sudo pbuilder create --distribution $(lsb_release -cs) --othermirror "deb http://security.ubuntu.com/ubuntu $(lsb_release -cs)-security main restricted"
+      - name: Checkout
+        uses: actions/checkout@v3
+      # - run: make -C ndn-cxx distro
+      # - run: cd ndn-cxx && sg sbuild "sbuild -A -d $(lsb_release -cs)-amd64 --nolog"
+      - name: Build package
+        run: make -C ndn-cxx _build DEBUILD="pdebuild --use-pdebuild-internal" DISTROS=$(lsb_release -cs)
+        env:
+          DEBFULLNAME: Foo Bar
+          DEBEMAIL: foobar@example.com
+      - run: |
+          ls -lh /var/cache/pbuilder/result
+          ls -lh ndn-cxx
+          ls -lh */work/
